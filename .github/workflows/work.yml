@@ -8,10 +8,13 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
+    # 定义系统类型，这里选择Ubuntu
     steps:
      - uses: actions/checkout@v2
+       # 从该仓库clone代码到虚拟机
      - name: 'setup python'
        uses: actions/setup-python@master
+       # 安装python
        with: 
          python-version: 3.7
        
@@ -30,6 +33,7 @@ jobs:
          netease_username: ${{ secrets.netease_username }}
          netease_password: ${{ secrets.netease_password }}
        run: |
+         # 执行代码
          pip3 install -r requirements.txt
          python3 ./Cloud189Checkin/C189CheckinForSCF.py
          python3 ./FF14Checkin/FF14CheckinForSCF.py
