@@ -21,14 +21,17 @@ def kxCheckin(*args):
 
         if c != "":
             a = s.get('https://bbs.pediy.com/user-is_signin.htm', headers=headers)
-            t = a.json()["message"]
-            if t != "已签到":
+            t = a.json()["code"]
+            if t != "0":
                 scurl = "https://bbs.pediy.com/user-signin.htm"
                 data = {
                     "csrf_token": c
                 }
                 k = requests.post(scurl, data=data, headers=headers)
                 print(k.json())
+                code = k.json()["code"]
+                if code == "0":
+                    print("kanxue签到成功")
         else:
             print("csrf出错")
     except:
