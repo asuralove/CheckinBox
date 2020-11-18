@@ -1,82 +1,91 @@
-import requests, time, re, rsa, json, base64
+# -*- coding: utf8 -*-
+
+import requests, time, re, rsa, json, base64, os
 from urllib import parse
 
-s = requests.Session()
-
-username = ""
-password = ""
-
-
-#Server酱报错推送提醒，需要填下下面的key，官网：https://sc.ftqq.com/3.version
-SCKEY = ""
+username = os.environ.get('username')
+password = os.environ.get('password')
+SCKEY = os.environ.get('SCKEY')
 #推送url
 scurl = f"https://sc.ftqq.com/{SCKEY}.send"
 
-if(username == "" or password == ""):
-    username = input("账号：")
-    password = input("密码：")
+def C189Checkin(*args):
+    try:
+        msg = ""
+        s = login(username, password)
+        if(s == "error"):
+            return "天翼云盘登录出错"
+        else:
+            pass
+        rand = str(round(time.time()*1000))
+        surl = f'https://api.cloud.189.cn/mkt/userSign.action?rand={rand}&clientType=TELEANDROID&version=8.6.3&model=SM-G930K'
+        url = f'https://m.cloud.189.cn/v2/drawPrizeMarketDetails.action?taskId=TASK_SIGNIN&activityId=ACT_SIGNIN'
+        url2 = f'https://m.cloud.189.cn/v2/drawPrizeMarketDetails.action?taskId=TASK_SIGNIN_PHOTOS&activityId=ACT_SIGNIN'
+        headers = {
+            'User-Agent':'Mozilla/5.0 (Linux; Android 5.1.1; SM-G930K Build/NRD90M; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/74.0.3729.136 Mobile Safari/537.36 Ecloud/8.6.3 Android/22 clientId/355325117317828 clientModel/SM-G930K imsi/460071114317824 clientChannelId/qq proVersion/1.0.6',
+            "Referer" : "https://m.cloud.189.cn/zhuanti/2016/sign/index.jsp?albumBackupOpened=1",
+            "Host" : "m.cloud.189.cn",
+            "Accept-Encoding" : "gzip, deflate",
+        }
+        #签到
+        response = s.get(surl,headers=headers,timeout=20)
+        netdiskBonus = response.json()['netdiskBonus']
+        if(response.json()['isSign'] == "false"):
+            print(f"未签到，签到获得  {netdiskBonus}  M空间")
+            msg += f"未签到，签到获得  {netdiskBonus}  M空间\n"
+        else:
+            print(f"已经签到过了，签到获得  {netdiskBonus}  M空间")
+            msg += f"已经签到过了，签到获得  {netdiskBonus}  M空间,"
 
-def main():
-    msg = login(username, password)
-    if(msg == "error"):
-        return None
-    else:
-        pass
-    rand = str(round(time.time()*1000))
-    surl = f'https://api.cloud.189.cn/mkt/userSign.action?rand={rand}&clientType=TELEANDROID&version=8.6.3&model=SM-G930K'
-    url = f'https://m.cloud.189.cn/v2/drawPrizeMarketDetails.action?taskId=TASK_SIGNIN&activityId=ACT_SIGNIN'
-    url2 = f'https://m.cloud.189.cn/v2/drawPrizeMarketDetails.action?taskId=TASK_SIGNIN_PHOTOS&activityId=ACT_SIGNIN'
-    headers = {
-        'User-Agent':'Mozilla/5.0 (Linux; Android 5.1.1; SM-G930K Build/NRD90M; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/74.0.3729.136 Mobile Safari/537.36 Ecloud/8.6.3 Android/22 clientId/355325117317828 clientModel/SM-G930K imsi/460071114317824 clientChannelId/qq proVersion/1.0.6',
-        "Referer" : "https://m.cloud.189.cn/zhuanti/2016/sign/index.jsp?albumBackupOpened=1",
-        "Host" : "m.cloud.189.cn",
-        "Accept-Encoding" : "gzip, deflate",
-    }
-    #签到
-    response = s.get(surl,headers=headers)
-    netdiskBonus = response.json()['netdiskBonus']
-    if(response.json()['isSign'] == "false"):
-        print(f"未签到，签到获得{netdiskBonus}M空间")
-    else:
-        print(f"已经签到过了，签到获得{netdiskBonus}M空间")
-    headers = {
-        'User-Agent':'Mozilla/5.0 (Linux; Android 5.1.1; SM-G930K Build/NRD90M; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/74.0.3729.136 Mobile Safari/537.36 Ecloud/8.6.3 Android/22 clientId/355325117317828 clientModel/SM-G930K imsi/460071114317824 clientChannelId/qq proVersion/1.0.6',
-        "Referer" : "https://m.cloud.189.cn/zhuanti/2016/sign/index.jsp?albumBackupOpened=1",
-        "Host" : "m.cloud.189.cn",
-        "Accept-Encoding" : "gzip, deflate",
-    }
-    #第一次抽奖
-    response = s.get(url,headers=headers)
-    if ("errorCode" in response.text):
-        if(response.json()['errorCode'] == "User_Not_Chance"):
-            print("抽奖次数不足")
+        #第一次抽奖
+        response = s.get(url,headers=headers,timeout=20)
+        if ("errorCode" in response.text):
+            if(response.json()['errorCode'] == "User_Not_Chance"):
+                print("抽奖次数不足")
+                msg += "抽奖次数不足,"
+            else:
+                print(response.text)
+                msg += "第一次抽奖出错,"
+                if(SCKEY != ""):
+                    data = {
+                        "text" : "第一次抽奖出错",
+                        "desp" : response.text
+                        }
+                    sc = requests.post(scurl, data=data)
         else:
-            print(response.text)
-            if(SCKEY != ""):
-                data = {
-                    "text" : "抽奖出错",
-                    "desp" : response.text
-                    }
-                sc = requests.post(scurl, data=data)
-    else:
-        description = response.json()['description']
-        print(f"抽奖获得{description}")
-    #第二次抽奖
-    response = s.get(url2,headers=headers)
-    if ("errorCode" in response.text):
-        if(response.json()['errorCode'] == "User_Not_Chance"):
-            print("抽奖次数不足")
+            description = response.json()['description']
+            print(f"抽奖获得  {description}  ")
+            msg += f"抽奖获得  {description}  ,"
+
+        #第二次抽奖
+        response = s.get(url2,headers=headers,timeout=20)
+        if ("errorCode" in response.text):
+            if(response.json()['errorCode'] == "User_Not_Chance"):
+                print("抽奖次数不足")
+                msg += "抽奖次数不足,"
+            else:
+                print(response.text)
+                msg += "第二次抽奖出错,"
+                if(SCKEY != ""):
+                    data = {
+                        "text" : "第二次抽奖出错",
+                        "desp" : response.text
+                        }
+                    sc = requests.post(scurl, data=data)
         else:
-            print(response.text)
-            if(SCKEY != ""):
-                data = {
-                    "text" : "第二次抽奖出错",
-                    "desp" : response.text
-                    }
-                sc = requests.post(scurl, data=data)
-    else:
-        description = response.json()['description']
-        print(f"抽奖获得{description}")
+            description = response.json()['description']
+            print(f"抽奖获得  {description}  ")
+            msg += f"抽奖获得  {description}  ,"
+    except Exception as e:
+        print("天翼云签到出错：", repr(e))
+        if(SCKEY != ""):
+            data = {
+                "text" : "天翼云签到出错",
+                "desp" : repr(e)
+                }
+            sc = requests.post(scurl, data=data)
+        msg += "天翼云签到出错："+repr(e)
+    return msg
 
 BI_RM = list("0123456789abcdefghijklmnopqrstuvwxyz")
 def int2char(a):
@@ -122,6 +131,7 @@ def calculate_md5_sign(params):
     return hashlib.md5('&'.join(sorted(params.split('&'))).encode('utf-8')).hexdigest()
 
 def login(username, password):
+    s = requests.Session()
     url = "https://cloud.189.cn/udb/udb_login.jsp?pageId=1&redirectURL=/main.action"
     r = s.get(url)
     captchaToken = re.findall(r"captchaToken' value='(.+?)'", r.text)[0]
@@ -167,8 +177,9 @@ def login(username, password):
     redirect_url = r.json()['toUrl']
     r = s.get(redirect_url)
     return s
-    
 
 if __name__ == "__main__":
-    main()
-
+    if username and password:
+        print("----------天翼云盘开始尝试签到----------")
+        C189Checkin()
+        print("----------天翼云盘签到执行完毕----------")
